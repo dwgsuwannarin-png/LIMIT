@@ -85,7 +85,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
   };
 
   const toggleBan = async (id: string, currentStatus: boolean, username: string) => {
-    const action = currentStatus ? "BAN" : "ACTIVATE";
+    const action = currentStatus ? "SUSPEND" : "ACTIVATE";
+    // Optional: Remove confirm if you want instant toggle, but kept for safety
     if (!window.confirm(`Are you sure you want to ${action} user "${username}"?`)) return;
 
     const userRef = doc(db, "users", id);
@@ -472,15 +473,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
                             </div>
                           </td>
                           <td className="p-4">
-                             {user.isActive ? (
-                               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-xs font-medium border border-emerald-500/20">
-                                 <CheckCircle className="w-3 h-3" /> Active
-                               </span>
-                             ) : (
-                               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-500/10 text-red-400 text-xs font-medium border border-red-500/20">
-                                 <Ban className="w-3 h-3" /> Banned
-                               </span>
-                             )}
+                             <div className="flex items-center gap-3">
+                                <button 
+                                  onClick={() => toggleBan(user.id, user.isActive, user.username)}
+                                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75 ${user.isActive ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                                >
+                                    <span className="sr-only">Toggle Status</span>
+                                    <span
+                                      aria-hidden="true"
+                                      className={`${user.isActive ? 'translate-x-4' : 'translate-x-0'}
+                                      pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out`}
+                                    />
+                                </button>
+                                <span className={`text-xs font-medium ${user.isActive ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                    {user.isActive ? 'Active' : 'Suspended'}
+                                </span>
+                             </div>
                           </td>
                           <td className="p-4">
                              <div className={`text-sm font-medium ${isExpired ? 'text-red-400' : 'text-slate-300'}`}>
@@ -518,17 +526,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
                           </td>
                           <td className="p-4 text-right">
                              <div className="flex items-center justify-end gap-2">
-                               <button 
-                                 onClick={() => toggleBan(user.id, user.isActive, user.username)}
-                                 className={`p-2 rounded-lg transition-colors ${
-                                   user.isActive 
-                                     ? 'text-slate-400 hover:bg-red-500/10 hover:text-red-400' 
-                                     : 'text-emerald-400 hover:bg-emerald-500/10'
-                                 }`}
-                                 title={user.isActive ? "Ban User" : "Activate User"}
-                               >
-                                 {user.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                               </button>
                                <button 
                                  onClick={() => handleDeleteUser(user.id, user.username)}
                                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
