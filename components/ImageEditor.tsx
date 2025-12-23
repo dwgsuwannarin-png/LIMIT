@@ -37,7 +37,10 @@ import {
   ExternalLink,
   ArrowUp,
   Zap,
-  Crown
+  Crown,
+  Save,
+  ShieldAlert,
+  BatteryWarning
 } from 'lucide-react';
 import { UserData } from '../types';
 import { GoogleGenAI } from "@google/genai";
@@ -80,6 +83,9 @@ const transformImage = (base64Str: string, type: 'rotate' | 'flip'): Promise<str
 };
 
 // --- CONSTANTS ---
+const MODEL_PREMIUM = 'gemini-3-pro-image-preview';
+const MODEL_STANDARD = 'gemini-2.5-flash-image';
+
 const DEFAULT_NEGATIVE_PROMPT = 'low quality, low resolution, blurry, distorted, watermark, text, signature, bad composition, ugly, geometric imperfections';
 
 const ROOM_TYPES = [
@@ -198,6 +204,14 @@ const TEXTS = {
     mode3D: '3D Plan to Room',
     dailyQuota: 'Daily Quota',
     quotaLimitReached: 'Daily quota limit reached. Please contact admin.',
+    settings: 'Settings',
+    customKey: 'Personal Gemini API Key (Optional)',
+    customKeyPlaceholder: 'AIza... (Overrides System Key)',
+    save: 'Save',
+    usingCustomKey: 'Using Personal Key',
+    standardMode: 'Standard Mode',
+    proMode: 'Pro Mode',
+    quotaExceededMsg: 'Daily Quota Exceeded. Switched to Standard Model (Free).',
   },
   TH: {
     exterior: 'ภายนอก',
@@ -236,6 +250,14 @@ const TEXTS = {
     mode3D: 'แปลน 3D เป็นห้อง',
     dailyQuota: 'โควต้าวันนี้',
     quotaLimitReached: 'โควต้าวันนี้หมดแล้ว กรุณาติดต่อแอดมิน',
+    settings: 'ตั้งค่า',
+    customKey: 'คีย์ส่วนตัว (ไม่บังคับ)',
+    customKeyPlaceholder: 'AIza... (ใช้แทนคีย์กลาง)',
+    save: 'บันทึก',
+    usingCustomKey: 'ใช้คีย์ส่วนตัว',
+    standardMode: 'โหมดมาตรฐาน',
+    proMode: 'โหมดโปร',
+    quotaExceededMsg: 'โควต้าวันนี้หมดแล้ว เปลี่ยนเป็นโหมดมาตรฐาน (ฟรี)',
   }
 };
 
@@ -243,6 +265,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   // UI State
   const [language, setLanguage] = useState<'EN' | 'TH'>('EN');
   const [activeTab, setActiveTab] = useState<'exterior'|'interior'|'plan'>('exterior');
+  const [showSettings, setShowSettings] = useState(false);
   
   // User Data Sync State
   const [currentUserData, setCurrentUserData] = useState<UserData | null>(user);
@@ -276,6 +299,10 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [warningMsg, setWarningMsg] = useState('');
+
+  // Settings State (Local Storage)
+  const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('user_custom_api_key') || '');
 
   // Refs
   const refFileInputRef = useRef<HTMLInputElement>(null);
@@ -307,6 +334,12 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
 
     return () => unsub();
   }, [user]);
+
+  // Save custom key to local storage
+  const handleSaveCustomKey = () => {
+      localStorage.setItem('user_custom_api_key', customApiKey);
+      setShowSettings(false);
+  };
 
   // --- HISTORY HELPERS ---
   const addToHistory = (image: string) => {
@@ -369,7 +402,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   };
 
   // Check if admin quota is available
-  const isPremiumAvailable = (): boolean => {
+  const hasPremiumQuota = (): boolean => {
       if (!currentUserData || currentUserData.id === 'admin') return true;
 
       const quota = currentUserData.dailyQuota || 10;
@@ -383,6 +416,9 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
 
   const incrementUsage = async () => {
       if (!currentUserData || currentUserData.id === 'admin') return;
+      
+      // If user used custom key, do NOT increment usage
+      if (customApiKey && customApiKey.length > 10) return;
 
       const userRef = doc(db, "users", currentUserData.id);
       const userSnap = await getDoc(userRef);
@@ -405,21 +441,25 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
 
   const handleGenerate = async () => {
     setErrorMsg('');
+    setWarningMsg('');
     
-    // 1. Strict Quota Check
-    if (!isPremiumAvailable()) {
-        setErrorMsg(t.quotaLimitReached);
-        return;
-    }
-
     setIsGenerating(true);
 
     try {
+        // 1. Determine Model & Mode
+        const shouldUsePremium = hasPremiumQuota() || (!!customApiKey && customApiKey.length > 10);
+        const modelName = shouldUsePremium ? MODEL_PREMIUM : MODEL_STANDARD;
+        
         // 2. System API Key Strategy
-        // Try Environment Variable First
-        let activeApiKey = process.env.API_KEY;
+        // Priority 1: User's Custom Key
+        let activeApiKey = customApiKey;
 
-        // If Env Var is missing or explicitly undefined string, check Firestore
+        // Priority 2: Environment Variable
+        if (!activeApiKey) {
+            activeApiKey = process.env.API_KEY || '';
+        }
+
+        // Priority 3: Firestore Global Key
         if (!activeApiKey || activeApiKey === 'undefined') {
              try {
                  const settingsRef = doc(db, "settings", "global");
@@ -433,7 +473,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
         }
 
         if (!activeApiKey) {
-            setErrorMsg("System Error: Admin API Key is not configured. Please contact admin to set the key in Dashboard.");
+            setErrorMsg("System Error: Admin API Key is not configured. Please contact admin.");
             setIsGenerating(false);
             return;
         }
@@ -447,7 +487,6 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
       }
 
       const genAI = new GoogleGenAI({ apiKey: activeApiKey }); 
-      const modelName = 'gemini-3-pro-image-preview'; 
       
       let fullPrompt = "";
       const renderStyleKeyword = RENDER_STYLE_PROMPTS[selectedRenderStyle] || RENDER_STYLE_PROMPTS['photo'];
@@ -535,10 +574,16 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
          parts.push({ inlineData: { data: refImage.split(',')[1], mimeType: "image/png" } });
       }
 
+      // Check specific configs for models
+      const generateConfig: any = { };
+      if (shouldUsePremium) {
+           generateConfig.imageConfig = { imageSize: '2K', aspectRatio: '16:9' };
+      }
+
       const response = await genAI.models.generateContent({
         model: modelName,
         contents: { parts },
-        config: { imageConfig: { imageSize: '2K', aspectRatio: '16:9' } }
+        config: generateConfig
       });
 
       const candidate = response.candidates?.[0];
@@ -553,8 +598,12 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                   setHistoryStep(0);
                   foundImage = true;
                   
-                  // SUCCESS: Deduct Quota
-                  await incrementUsage();
+                  // SUCCESS: Deduct Quota ONLY if using Premium and NOT custom key
+                  if (shouldUsePremium && !customApiKey) {
+                      await incrementUsage();
+                  } else if (!shouldUsePremium) {
+                      setWarningMsg(t.quotaExceededMsg);
+                  }
                   break;
               }
           }
@@ -593,6 +642,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
     }
     if (refFileInputRef.current) refFileInputRef.current.value = '';
     setErrorMsg('');
+    setWarningMsg('');
   };
 
   const handleUseAsInput = () => {
@@ -667,12 +717,70 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   // QUOTA UI DATA
   const quota = currentUserData?.dailyQuota || 10;
   const usage = currentUserData?.usageCount || 0;
-  const isAvailable = isPremiumAvailable();
+  // isProMode = Has Quota OR Custom Key
+  const hasQuota = hasPremiumQuota();
+  const isProMode = hasQuota || (!!customApiKey && customApiKey.length > 10);
   const usagePercent = Math.min((usage / quota) * 100, 100);
+
+  // Helper for Plan Name
+  const getPlanName = (q: number) => {
+      if (q >= 500) return 'ENTERPRISE';
+      if (q >= 50) return 'PRO PLAN';
+      return 'STARTER';
+  };
+
+  const planName = getPlanName(quota);
 
   return (
     <div className="h-screen w-full flex flex-col bg-gray-950 text-gray-200 font-sans overflow-hidden">
       
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+             <div className="p-5 border-b border-slate-800 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                   <Settings className="w-5 h-5 text-indigo-400" />
+                   {t.settings}
+                </h3>
+                <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-white transition-colors">
+                   <X className="w-5 h-5" />
+                </button>
+             </div>
+             <div className="p-6 space-y-4">
+                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 flex items-start gap-3">
+                   <ShieldAlert className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+                   <p className="text-xs text-indigo-200 leading-relaxed">
+                      If you have your own Google Gemini API Key, you can enter it here. 
+                      It will take priority over the system quota, allowing unlimited generation based on your key's limits.
+                   </p>
+                </div>
+                <div>
+                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t.customKey}</label>
+                   <div className="relative">
+                      <Key className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                      <input 
+                         type="password"
+                         value={customApiKey}
+                         onChange={(e) => setCustomApiKey(e.target.value)}
+                         className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
+                         placeholder={t.customKeyPlaceholder}
+                      />
+                   </div>
+                </div>
+             </div>
+             <div className="p-5 border-t border-slate-800 flex justify-end gap-2">
+                <button onClick={() => setShowSettings(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">
+                   Cancel
+                </button>
+                <button onClick={handleSaveCustomKey} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg transition-colors shadow-lg shadow-indigo-500/20">
+                   {t.save}
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Bar */}
       <header className="h-16 border-b border-gray-800 bg-gray-900/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-30">
         <div className="flex items-center gap-3">
@@ -681,10 +789,23 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
           </div>
           <div>
             <h1 className="text-lg font-bold text-white tracking-tight leading-none">Professional AI</h1>
-            <p className="text-[10px] text-gray-400 font-medium mt-0.5 flex items-center gap-1">
-              <span className={`w-1.5 h-1.5 rounded-full ${isAvailable ? 'bg-indigo-500' : 'bg-red-500'}`}></span>
-              {currentUserData?.username || 'Guest'}
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+               <span className={`w-1.5 h-1.5 rounded-full ${hasQuota ? 'bg-indigo-500' : 'bg-amber-500'}`}></span>
+               <p className="text-[10px] text-gray-400 font-medium">
+                {currentUserData?.username || 'Guest'}
+               </p>
+               <span className="text-[10px] text-gray-600">•</span>
+               {isProMode ? (
+                  <p className="text-[9px] font-bold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20 tracking-wide">
+                    {planName}
+                  </p>
+               ) : (
+                  <p className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 tracking-wide flex items-center gap-1">
+                    <BatteryWarning className="w-3 h-3" />
+                    {language === 'EN' ? 'STANDARD MODE' : 'โหมดมาตรฐาน'}
+                  </p>
+               )}
+            </div>
           </div>
         </div>
 
@@ -697,6 +818,11 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
           )}
           <div className="h-6 w-px bg-gray-800 mx-1"></div>
           
+          <button onClick={() => setShowSettings(true)} className={`flex items-center gap-1.5 text-xs font-medium transition-colors px-3 py-1.5 rounded-lg border ${customApiKey ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'text-gray-400 hover:text-white hover:bg-gray-800 border-transparent'}`}>
+            <Settings className="w-3.5 h-3.5" /> 
+            {customApiKey ? t.usingCustomKey : t.settings}
+          </button>
+
           <button onClick={() => setLanguage(l => l === 'EN' ? 'TH' : 'EN')} className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-800">
             <Globe className="w-3.5 h-3.5" /> {language}
           </button>
@@ -719,18 +845,31 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
                             <Zap className="w-3 h-3 text-indigo-400" />
-                            {t.dailyQuota}
+                            {planName} QUOTA
                         </span>
-                        <span className={`text-[10px] font-bold ${isAvailable ? 'text-white' : 'text-red-400'}`}>
-                            {usage} / {quota}
+                        <span className={`text-[10px] font-bold ${hasQuota ? 'text-white' : 'text-red-400'}`}>
+                            {customApiKey ? '∞' : usage} / {customApiKey ? '∞' : quota}
                         </span>
                     </div>
-                    <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                         <div 
-                           className={`h-full rounded-full transition-all duration-500 ${isAvailable ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : 'bg-red-500'}`} 
-                           style={{width: `${usagePercent}%`}}
-                         ></div>
-                    </div>
+                    {customApiKey ? (
+                         <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                             <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 w-full animate-pulse"></div>
+                         </div>
+                    ) : (
+                        <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                             <div 
+                               className={`h-full rounded-full transition-all duration-500 ${hasQuota ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : 'bg-red-500'}`} 
+                               style={{width: `${usagePercent}%`}}
+                             ></div>
+                        </div>
+                    )}
+                    {customApiKey ? (
+                      <p className="text-[9px] text-indigo-400 mt-1.5 text-center">* Using Personal API Key</p>
+                    ) : !hasQuota ? (
+                      <p className="text-[9px] text-amber-400 mt-1.5 text-center flex items-center justify-center gap-1">
+                         <BatteryWarning className="w-3 h-3" /> Switched to Free Mode
+                      </p>
+                    ) : null}
                  </div>
              </div>
           )}
@@ -1006,6 +1145,12 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
           </div>
 
           <div className="p-4 bg-gray-900 border-t border-gray-800 shrink-0 z-10 space-y-3">
+            {warningMsg && (
+               <div className="flex items-start gap-2 text-amber-400 text-xs bg-amber-950/30 p-3 rounded-lg border border-amber-900/50">
+                <BatteryWarning className="w-4 h-4 shrink-0 mt-0.5" />
+                <span className="leading-tight">{warningMsg}</span>
+              </div>
+            )}
             {errorMsg && (
               <div className="flex items-start gap-2 text-red-400 text-xs bg-red-950/30 p-3 rounded-lg border border-red-900/50">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -1017,9 +1162,9 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
               onClick={handleGenerate}
               disabled={isGenerating}
               className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-[0.98] border relative overflow-hidden group disabled:opacity-70 disabled:cursor-not-allowed ${
-                 isAvailable 
+                 isProMode 
                   ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-indigo-400/20 shadow-indigo-900/40'
-                  : 'bg-gray-800 cursor-not-allowed text-gray-500'
+                  : 'bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 text-white border-slate-500/30'
               }`}
             >
               <div className={`absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-xl`}></div>
@@ -1032,7 +1177,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    {t.generate}
+                    {isProMode ? t.generate : t.standard}
                   </>
                 )}
               </span>
