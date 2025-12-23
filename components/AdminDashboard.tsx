@@ -29,6 +29,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
   const [editQuotaId, setEditQuotaId] = useState<string | null>(null);
   const [editingQuotaValue, setEditingQuotaValue] = useState<number>(0);
 
+  // Expiry Editing State
+  const [editExpiryId, setEditExpiryId] = useState<string | null>(null);
+  const [editingExpiryDate, setEditingExpiryDate] = useState<string>('');
+
   // System Settings State
   const [newSystemKey, setNewSystemKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
@@ -137,6 +141,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
       } catch (err) {
         console.error("Failed to update quota", err);
         alert("Failed to update quota");
+      }
+  };
+
+  const startEditingExpiry = (id: string, currentDate: string) => {
+      setEditExpiryId(id);
+      try {
+        const date = new Date(currentDate);
+        // Format to YYYY-MM-DD local time for input
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        setEditingExpiryDate(`${year}-${month}-${day}`);
+      } catch (e) {
+        setEditingExpiryDate('');
+      }
+  };
+
+  const saveExpiry = async (id: string) => {
+      try {
+        if (!editingExpiryDate) return;
+        const [y, m, d] = editingExpiryDate.split('-').map(Number);
+        // Create date in local time end of day
+        const newDate = new Date(y, m - 1, d, 23, 59, 59); 
+        
+        const userRef = doc(db, "users", id);
+        await updateDoc(userRef, {
+           expiryDate: newDate.toISOString()
+        });
+        setEditExpiryId(null);
+      } catch (err) {
+        console.error("Failed to update expiry", err);
+        alert("Failed to update expiry date");
       }
   };
 
@@ -491,10 +527,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
                              </div>
                           </td>
                           <td className="p-4">
-                             <div className={`text-sm font-medium ${isExpired ? 'text-red-400' : 'text-slate-300'}`}>
-                               {new Date(user.expiryDate).toLocaleDateString()}
-                             </div>
-                             {isExpired && <span className="text-[10px] text-red-500 font-bold uppercase">Expired</span>}
+                              {editExpiryId === user.id ? (
+                                <div className="flex items-center gap-1">
+                                  <input 
+                                    type="date" 
+                                    value={editingExpiryDate}
+                                    onChange={(e) => setEditingExpiryDate(e.target.value)}
+                                    className="w-32 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:border-indigo-500 outline-none"
+                                  />
+                                  <button onClick={() => saveExpiry(user.id)} className="text-green-400 hover:bg-green-400/10 p-1 rounded"><CheckCircle className="w-3 h-3" /></button>
+                                  <button onClick={() => setEditExpiryId(null)} className="text-red-400 hover:bg-red-400/10 p-1 rounded"><X className="w-3 h-3" /></button>
+                                </div>
+                              ) : (
+                                <div className="group/expiry flex items-center gap-2">
+                                  <div className="flex flex-col">
+                                    <span className={`text-sm font-medium ${isExpired ? 'text-red-400' : 'text-slate-300'}`}>
+                                      {new Date(user.expiryDate).toLocaleDateString()}
+                                    </span>
+                                    {isExpired && <span className="text-[10px] text-red-500 font-bold uppercase leading-none">Expired</span>}
+                                  </div>
+                                  <button 
+                                    onClick={() => startEditingExpiry(user.id, user.expiryDate)}
+                                    className="opacity-0 group-hover/expiry:opacity-100 transition-opacity text-indigo-400 hover:bg-indigo-400/10 p-1 rounded"
+                                    title="Edit Expiry Date"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
                           </td>
                           <td className="p-4">
                              {editQuotaId === user.id ? (
