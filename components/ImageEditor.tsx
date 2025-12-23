@@ -412,21 +412,40 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
         return;
     }
 
-    // 2. System API Key
-    const activeApiKey = process.env.API_KEY;
-    if (!activeApiKey) {
-        setErrorMsg("System Error: Admin API Key is not configured.");
-        return;
-    }
-    
-    // 3. Validation
-    if (activeTab === 'exterior' && !prompt && !selectedArchStyle && !selectedScene && !mainImage && !refImage) {
-      setErrorMsg(t.alertPrompt);
-      return;
-    }
-
     setIsGenerating(true);
+
     try {
+        // 2. System API Key Strategy
+        // Try Environment Variable First
+        let activeApiKey = process.env.API_KEY;
+
+        // If Env Var is missing or explicitly undefined string, check Firestore
+        if (!activeApiKey || activeApiKey === 'undefined') {
+             try {
+                 const settingsRef = doc(db, "settings", "global");
+                 const settingsSnap = await getDoc(settingsRef);
+                 if (settingsSnap.exists()) {
+                     activeApiKey = settingsSnap.data().geminiApiKey;
+                 }
+             } catch (e) {
+                 console.error("Failed to fetch key from DB", e);
+             }
+        }
+
+        if (!activeApiKey) {
+            setErrorMsg("System Error: Admin API Key is not configured. Please contact admin to set the key in Dashboard.");
+            setIsGenerating(false);
+            return;
+        }
+
+    
+      // 3. Validation
+      if (activeTab === 'exterior' && !prompt && !selectedArchStyle && !selectedScene && !mainImage && !refImage) {
+        setErrorMsg(t.alertPrompt);
+        setIsGenerating(false);
+        return;
+      }
+
       const genAI = new GoogleGenAI({ apiKey: activeApiKey }); 
       const modelName = 'gemini-3-pro-image-preview'; 
       

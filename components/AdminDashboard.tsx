@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/firebase';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, setDoc, getDoc } from 'firebase/firestore';
 import { UserData } from '../types';
-import { Users, UserPlus, Ban, CheckCircle, RefreshCw, Key, Trash2, Search, AlertTriangle, UserCheck, Clock, ShieldCheck, Sparkles, BarChart3, Settings, X, Pencil, Zap } from 'lucide-react';
+import { Users, UserPlus, Ban, CheckCircle, RefreshCw, Key, Trash2, Search, AlertTriangle, UserCheck, Clock, ShieldCheck, Sparkles, BarChart3, Settings, X, Pencil, Zap, Save, Lock } from 'lucide-react';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -18,6 +18,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
   // Quota Editing State
   const [editQuotaId, setEditQuotaId] = useState<string | null>(null);
   const [editingQuotaValue, setEditingQuotaValue] = useState<number>(0);
+
+  // System Settings State
+  const [newSystemKey, setNewSystemKey] = useState('');
+  const [isSavingKey, setIsSavingKey] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
@@ -125,6 +129,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
       }
   };
 
+  const handleSaveSystemKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSystemKey) return;
+    setIsSavingKey(true);
+    try {
+        // Save to a specialized 'settings' collection
+        await setDoc(doc(db, "settings", "global"), {
+            geminiApiKey: newSystemKey,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+        setNewSystemKey('');
+        alert("System API Key has been updated in the database.");
+    } catch (err) {
+        console.error("Failed to save system key", err);
+        alert("Failed to save system key.");
+    } finally {
+        setIsSavingKey(false);
+    }
+  };
+
   // Stats Logic
   const totalMembers = users.length;
   const activeMembers = users.filter(u => u.isActive && new Date(u.expiryDate) > new Date()).length;
@@ -206,89 +230,130 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Add User Form */}
-          <div className="lg:col-span-1 h-fit bg-slate-900/50 border border-slate-800 rounded-2xl p-6 sticky top-24">
-            <div className="flex items-center gap-2 mb-6 text-indigo-400">
-              <UserPlus className="w-5 h-5" />
-              <h2 className="text-lg font-bold">Register New User</h2>
-            </div>
-            
-            <form onSubmit={handleAddUser} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Username</label>
-                <div className="relative">
-                  <UserPlus className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                  <input
-                    type="text"
-                    value={newUser.username}
-                    onChange={(e) => setNewUser({...newUser, username: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all"
-                    placeholder="Enter username"
-                    required
-                  />
+          {/* Left Column: Forms */}
+          <div className="lg:col-span-1 space-y-6">
+              
+              {/* Add User Form */}
+              <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-6 text-indigo-400">
+                  <UserPlus className="w-5 h-5" />
+                  <h2 className="text-lg font-bold">Register New User</h2>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Password</label>
-                <div className="relative">
-                  <Key className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                  <input
-                    type="text"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all"
-                    placeholder="Set password"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Duration</label>
-                   <div className="relative">
-                      <Clock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                      <select
-                        value={newUser.days}
-                        onChange={(e) => setNewUser({...newUser, days: Number(e.target.value)})}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none appearance-none"
-                      >
-                        <option value={7}>7 Days</option>
-                        <option value={30}>30 Days</option>
-                        <option value={90}>3 Months</option>
-                        <option value={365}>1 Year</option>
-                      </select>
-                   </div>
-                </div>
-                <div>
-                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Quota / Day</label>
-                   <div className="relative">
-                      <Zap className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                      <input 
-                         type="number"
-                         min="1"
-                         value={newUser.quota}
-                         onChange={(e) => setNewUser({...newUser, quota: Number(e.target.value)})}
-                         className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
+                
+                <form onSubmit={handleAddUser} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Username</label>
+                    <div className="relative">
+                      <UserPlus className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                      <input
+                        type="text"
+                        value={newUser.username}
+                        onChange={(e) => setNewUser({...newUser, username: e.target.value})}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all"
+                        placeholder="Enter username"
+                        required
                       />
-                   </div>
-                </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Password</label>
+                    <div className="relative">
+                      <Key className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                      <input
+                        type="text"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all"
+                        placeholder="Set password"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Duration</label>
+                      <div className="relative">
+                          <Clock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                          <select
+                            value={newUser.days}
+                            onChange={(e) => setNewUser({...newUser, days: Number(e.target.value)})}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none appearance-none"
+                          >
+                            <option value={7}>7 Days</option>
+                            <option value={30}>30 Days</option>
+                            <option value={90}>3 Months</option>
+                            <option value={365}>1 Year</option>
+                          </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Quota / Day</label>
+                      <div className="relative">
+                          <Zap className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                          <input 
+                            type="number"
+                            min="1"
+                            value={newUser.quota}
+                            onChange={(e) => setNewUser({...newUser, quota: Number(e.target.value)})}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
+                          />
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-2"
+                  >
+                    {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                    Create Account
+                  </button>
+                </form>
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-2"
-              >
-                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                Create Account
-              </button>
-            </form>
+              {/* System Settings Form */}
+              <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-4 text-amber-400">
+                  <Settings className="w-5 h-5" />
+                  <h2 className="text-lg font-bold">System Settings</h2>
+                </div>
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
+                    <p className="text-xs text-amber-200 leading-relaxed">
+                        <AlertTriangle className="w-3 h-3 inline mr-1" />
+                        Enter the Admin API Key here to enable generation for all members. This overrides the system environment variable.
+                    </p>
+                </div>
+                <form onSubmit={handleSaveSystemKey} className="space-y-4">
+                   <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Gemini API Key</label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                      <input
+                        type="password"
+                        value={newSystemKey}
+                        onChange={(e) => setNewSystemKey(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none transition-all placeholder-slate-600"
+                        placeholder="AIza..."
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSavingKey || !newSystemKey}
+                    className="w-full bg-slate-800 hover:bg-amber-600 hover:text-white text-slate-300 font-bold py-3 rounded-xl border border-slate-700 hover:border-amber-500 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    {isSavingKey ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save System Key
+                  </button>
+                </form>
+              </div>
           </div>
 
           {/* User List Table */}
-          <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+          <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden flex flex-col h-fit">
             <div className="p-4 border-b border-slate-800 flex flex-wrap gap-4 justify-between items-center bg-slate-900/80 backdrop-blur">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                  <Users className="w-5 h-5 text-indigo-400" />
