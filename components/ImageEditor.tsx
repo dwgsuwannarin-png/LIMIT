@@ -272,7 +272,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   const [showSettings, setShowSettings] = useState(false);
   
   // Generation Mode State
-  const [generationMode, setGenerationMode] = useState<'standard' | 'pro'>('pro');
+  const [generationMode, setGenerationMode] = useState<'standard' | 'pro'>('standard');
   
   // User Data Sync State
   const [currentUserData, setCurrentUserData] = useState<UserData | null>(user);
@@ -1211,11 +1211,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
             <button 
               onClick={handleGenerate}
               disabled={isGenerating}
-              className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-[0.98] border relative overflow-hidden group disabled:opacity-70 disabled:cursor-not-allowed ${
-                 generationMode === 'pro' && isProMode
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-indigo-400/20 shadow-indigo-900/40'
-                  : 'bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 text-white border-slate-500/30'
-              }`}
+              className="w-full font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-[0.98] border relative overflow-hidden group disabled:opacity-70 disabled:cursor-not-allowed bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-indigo-400/20 shadow-indigo-900/40"
             >
               <div className={`absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-xl`}></div>
               <span className="relative flex items-center justify-center gap-2 tracking-wide">
