@@ -867,11 +867,11 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
         <aside className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col shrink-0 z-20">
           
           {/* USER QUOTA BAR & MODE SELECTOR */}
-          <div className="px-4 pt-4 pb-2 space-y-3">
+          <div className="px-3 pt-3 pb-2 space-y-2">
              <div className="grid grid-cols-2 gap-1 p-1 bg-gray-950/50 rounded-xl border border-gray-800">
                 <button
                     onClick={() => setGenerationMode('standard')}
-                    className={`py-2 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-2 transition-all ${
+                    className={`h-9 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-2 transition-all ${
                         generationMode === 'standard' 
                         ? 'bg-gray-800 text-white shadow-md border border-gray-700' 
                         : 'text-gray-500 hover:bg-gray-800/50 hover:text-gray-300'
@@ -882,7 +882,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                 </button>
                 <button
                     onClick={() => setGenerationMode('pro')}
-                    className={`py-2 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-2 transition-all ${
+                    className={`h-9 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-2 transition-all ${
                         generationMode === 'pro' 
                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/20' 
                         : 'text-gray-500 hover:bg-gray-800/50 hover:text-gray-300'
@@ -928,7 +928,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
           </div>
 
           {/* Mode Tabs */}
-          <div className="px-4 py-2 shrink-0">
+          <div className="px-3 py-1 shrink-0">
             <div className="grid grid-cols-3 gap-1 p-1 bg-gray-950/50 rounded-xl border border-gray-800">
               {[
                 { id: 'exterior', label: t.exterior, icon: Home },
@@ -938,7 +938,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`relative flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all duration-300 overflow-hidden group ${
+                  className={`relative flex items-center justify-center gap-2 h-9 rounded-lg text-xs font-bold transition-all duration-300 overflow-hidden group ${
                     activeTab === tab.id 
                       ? 'text-white shadow-md' 
                       : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800/50'
@@ -957,8 +957,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
           </div>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
-            <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4">
+            <div className="space-y-3">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">
                   {t.mainPrompt}
@@ -966,7 +966,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="w-full h-20 bg-gray-950 border border-gray-700 rounded-xl p-3 text-sm text-gray-200 placeholder-gray-700 resize-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full h-16 bg-gray-950 border border-gray-700 rounded-xl p-3 text-sm text-gray-200 placeholder-gray-700 resize-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                   placeholder={language === 'EN' ? "Additional details..." : "รายละเอียดเพิ่มเติม..."}
                 />
               </div>
@@ -978,7 +978,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                 <textarea
                   value={additionalCommand}
                   onChange={(e) => setAdditionalCommand(e.target.value)}
-                  className="w-full h-20 bg-gray-950 border border-gray-700 rounded-xl p-3 text-sm text-gray-200 placeholder-gray-700 resize-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 outline-none transition-all"
+                  className="w-full h-16 bg-gray-950 border border-gray-700 rounded-xl p-3 text-sm text-gray-200 placeholder-gray-700 resize-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 outline-none transition-all"
                   placeholder={language === 'EN' ? "e.g., Make it night time, Add a red car..." : "เช่น เปลี่ยนเป็นกลางคืน, เติมรถสีแดง..."}
                 />
               </div>
@@ -989,7 +989,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                 </label>
                 <div 
                   onClick={handleRefUploadClick}
-                  className={`flex flex-col items-center justify-center w-full h-16 border-2 border-dashed rounded-xl cursor-pointer transition-all group relative overflow-hidden ${refImage ? 'border-indigo-500 bg-gray-900' : 'border-gray-700 hover:border-gray-500 hover:bg-gray-800/50'}`}
+                  className={`flex flex-col items-center justify-center w-full h-14 border-2 border-dashed rounded-xl cursor-pointer transition-all group relative overflow-hidden ${refImage ? 'border-indigo-500 bg-gray-900' : 'border-gray-700 hover:border-gray-500 hover:bg-gray-800/50'}`}
                 >
                   {refImage ? (
                     <>
@@ -1012,12 +1012,12 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                 <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                   <Brush className="w-3 h-3" /> {t.imageStyle}
                 </label>
-                <div className="grid grid-cols-3 gap-0.5">
+                <div className="grid grid-cols-2 gap-1">
                   {renderStyles.map((style) => (
                     <button
                       key={style.id}
                       onClick={() => setSelectedRenderStyle(selectedRenderStyle === style.id ? '' : style.id)}
-                      className={`py-1 rounded-lg text-[10px] font-medium flex items-center justify-center border transition-all duration-200 ${
+                      className={`h-9 rounded-lg text-[10px] font-medium flex items-center justify-center border transition-all duration-200 ${
                         selectedRenderStyle === style.id
                           ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300 shadow-md'
                           : 'bg-gray-950 border-gray-800 text-gray-500 hover:bg-gray-800 hover:text-gray-300'
@@ -1030,20 +1030,20 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
               </div>
             </div>
 
-            <div className="space-y-6 pt-4 border-t border-gray-800">
+            <div className="space-y-4 pt-3 border-t border-gray-800">
                 {activeTab === 'interior' && (
-                   <div className="space-y-2">
+                   <div className="space-y-1.5">
                      <div className="flex items-center justify-between">
                         <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                          <Box className="w-3 h-3" /> {t.roomType}
                        </label>
                      </div>
-                     <div className="grid grid-cols-2 gap-2">
+                     <div className="grid grid-cols-2 gap-1">
                        {ROOM_TYPES.map((room) => (
                          <button
                            key={room.id}
                            onClick={() => setSelectedRoom(selectedRoom === room.id ? '' : room.id)}
-                           className={`py-3 px-3 rounded-lg text-xs font-medium transition-all border flex items-center gap-2 ${
+                           className={`h-9 px-3 rounded-lg text-xs font-medium transition-all border flex items-center gap-2 ${
                              selectedRoom === room.id
                                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md'
                                : 'bg-gray-950 border-gray-800 text-gray-500 hover:border-gray-700 hover:text-gray-300'
@@ -1058,51 +1058,51 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                 )}
                 
                 {activeTab === 'interior' && (
-                   <div className="space-y-2">
+                   <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                          <Cuboid className="w-3 h-3" /> {t.inputMode}
                        </label>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-3 gap-1">
                          <button
                            onClick={() => setInteriorMode('standard')}
-                           className={`py-2 px-1 rounded-lg text-[10px] font-medium border flex flex-col items-center gap-1 ${
+                           className={`h-9 px-1 rounded-lg text-[10px] font-medium border flex items-center justify-center gap-2 ${
                              interiorMode === 'standard'
                                ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300'
                                : 'bg-gray-950 border-gray-800 text-gray-500 hover:border-gray-700'
                            }`}
                          >
                             <ImageIcon className="w-4 h-4" />
-                            {t.modeStandard}
+                            <span className="truncate">{t.modeStandard}</span>
                          </button>
                          <button
                            onClick={() => setInteriorMode('from_2d')}
-                           className={`py-2 px-1 rounded-lg text-[10px] font-medium border flex flex-col items-center gap-1 ${
+                           className={`h-9 px-1 rounded-lg text-[10px] font-medium border flex items-center justify-center gap-2 ${
                              interiorMode === 'from_2d'
                                ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300'
                                : 'bg-gray-950 border-gray-800 text-gray-500 hover:border-gray-700'
                            }`}
                          >
                             <FileText className="w-4 h-4" />
-                            {t.mode2D}
+                            <span className="truncate">{t.mode2D}</span>
                          </button>
                          <button
                            onClick={() => setInteriorMode('from_3d')}
-                           className={`py-2 px-1 rounded-lg text-[10px] font-medium border flex flex-col items-center gap-1 ${
+                           className={`h-9 px-1 rounded-lg text-[10px] font-medium border flex items-center justify-center gap-2 ${
                              interiorMode === 'from_3d'
                                ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300'
                                : 'bg-gray-950 border-gray-800 text-gray-500 hover:border-gray-700'
                            }`}
                          >
                             <Cuboid className="w-4 h-4" />
-                            {t.mode3D}
+                            <span className="truncate">{t.mode3D}</span>
                          </button>
                       </div>
                    </div>
                 )}
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                      <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                       <Palette className="w-3 h-3" /> 
@@ -1117,7 +1117,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                           <button
                             key={style.id}
                             onClick={() => setSelectedIntStyle(selectedIntStyle === style.id ? '' : style.id)}
-                            className={`py-1.5 px-2 rounded-lg text-xs text-left font-medium transition-all border relative overflow-hidden ${
+                            className={`h-9 px-2 rounded-lg text-xs text-left font-medium transition-all border relative overflow-hidden flex items-center ${
                               selectedIntStyle === style.id
                                 ? 'bg-gray-800 text-white border-indigo-500 shadow-md'
                                 : 'bg-gray-950 border-gray-800 text-gray-500 hover:border-gray-700 hover:text-gray-300'
@@ -1134,7 +1134,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                           <button
                             key={style.id}
                             onClick={() => setSelectedPlanStyle(selectedPlanStyle === style.id ? '' : style.id)}
-                            className={`py-1.5 px-2 rounded-lg text-xs text-left font-medium transition-all border relative overflow-hidden ${
+                            className={`h-9 px-2 rounded-lg text-xs text-left font-medium transition-all border relative overflow-hidden flex items-center ${
                               selectedPlanStyle === style.id
                                 ? 'bg-gray-800 text-white border-indigo-500 shadow-md'
                                 : 'bg-gray-950 border-gray-800 text-gray-500 hover:border-gray-700 hover:text-gray-300'
@@ -1151,7 +1151,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                           <button
                             key={style.id}
                             onClick={() => setSelectedArchStyle(style.id === selectedArchStyle ? '' : style.id)}
-                            className={`py-1.5 px-2 rounded-lg text-xs text-left font-medium transition-all border relative overflow-hidden ${
+                            className={`h-9 px-2 rounded-lg text-xs text-left font-medium transition-all border relative overflow-hidden flex items-center ${
                               selectedArchStyle === style.id
                                 ? 'bg-gray-800 text-white border-indigo-500 shadow-md'
                                 : 'bg-gray-950 border-gray-800 text-gray-500 hover:border-gray-700 hover:text-gray-300'
@@ -1166,7 +1166,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                 </div>
 
                 {activeTab === 'exterior' && (
-                  <div className="space-y-2 flex-1 flex flex-col">
+                  <div className="space-y-1.5 flex-1 flex flex-col">
                     <div className="flex items-center justify-between shrink-0">
                        <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                         <Mountain className="w-3 h-3" /> {t.scene}
@@ -1179,7 +1179,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                         <button
                           key={scene.id}
                           onClick={() => setSelectedScene(scene.id === selectedScene ? '' : scene.id)}
-                          className={`py-2 px-2 rounded-lg text-[10px] text-left font-medium transition-all border relative overflow-hidden flex items-center ${
+                          className={`h-9 px-2 rounded-lg text-[10px] text-left font-medium transition-all border relative overflow-hidden flex items-center ${
                             selectedScene === scene.id
                               ? 'bg-gray-800 text-white border-emerald-500 shadow-sm'
                               : 'bg-gray-950 border-gray-800 text-gray-500 hover:border-gray-700 hover:text-gray-300'
@@ -1197,15 +1197,15 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
             <div className="h-2"></div>
           </div>
 
-          <div className="p-4 bg-gray-900 border-t border-gray-800 shrink-0 z-10 space-y-3">
+          <div className="p-3 bg-gray-900 border-t border-gray-800 shrink-0 z-10 space-y-3">
             {warningMsg && (
-               <div className="flex items-start gap-2 text-amber-400 text-xs bg-amber-950/30 p-3 rounded-lg border border-amber-900/50">
+               <div className="flex items-start gap-2 text-amber-400 text-xs bg-amber-950/30 p-2 rounded-lg border border-amber-900/50">
                 <BatteryWarning className="w-4 h-4 shrink-0 mt-0.5" />
                 <span className="leading-tight">{warningMsg}</span>
               </div>
             )}
             {errorMsg && (
-              <div className="flex items-start gap-2 text-red-400 text-xs bg-red-950/30 p-3 rounded-lg border border-red-900/50">
+              <div className="flex items-start gap-2 text-red-400 text-xs bg-red-950/30 p-2 rounded-lg border border-red-900/50">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span className="leading-tight">{errorMsg}</span>
               </div>
@@ -1214,7 +1214,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
             <button 
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="w-full font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-[0.98] border relative overflow-hidden group disabled:opacity-70 disabled:cursor-not-allowed bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-indigo-400/20 shadow-indigo-900/40"
+              className="w-full font-bold py-3 rounded-xl shadow-lg transition-all transform active:scale-[0.98] border relative overflow-hidden group disabled:opacity-70 disabled:cursor-not-allowed bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-indigo-400/20 shadow-indigo-900/40"
             >
               <div className={`absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-xl`}></div>
               <span className="relative flex items-center justify-center gap-2 tracking-wide">
