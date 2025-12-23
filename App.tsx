@@ -38,7 +38,10 @@ function App() {
             username: 'Administrator', 
             isActive: true, 
             expiryDate: new Date(2099, 1, 1).toISOString(),
-            createdAt: new Date().toISOString() 
+            createdAt: new Date().toISOString(),
+            dailyQuota: 99999, 
+            usageCount: 0,
+            lastUsageDate: new Date().toISOString().split('T')[0]
           }
         });
         return;

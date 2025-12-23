@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../services/firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { UserData } from '../types';
-import { Users, UserPlus, Ban, CheckCircle, RefreshCw, Key, Trash2, Search, AlertTriangle, UserCheck, Clock, ShieldCheck, Sparkles, BarChart3, Settings } from 'lucide-react';
+import { Users, UserPlus, Ban, CheckCircle, RefreshCw, Key, Trash2, Search, AlertTriangle, UserCheck, Clock, ShieldCheck, Sparkles, BarChart3, Settings, X, Pencil, Zap } from 'lucide-react';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -14,6 +14,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
   const [newUser, setNewUser] = useState({ username: '', password: '', days: 30, quota: 10 });
   const [editPasswordId, setEditPasswordId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  
+  // Quota Editing State
+  const [editQuotaId, setEditQuotaId] = useState<string | null>(null);
+  const [editingQuotaValue, setEditingQuotaValue] = useState<number>(0);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -102,11 +107,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
     }
   };
 
-  const handleUpdateQuota = async (id: string, newQuota: number) => {
-     const userRef = doc(db, "users", id);
-     await updateDoc(userRef, {
-       dailyQuota: newQuota
-     });
+  const startEditingQuota = (id: string, currentQuota: number) => {
+      setEditQuotaId(id);
+      setEditingQuotaValue(currentQuota);
+  };
+
+  const saveQuota = async (id: string) => {
+      try {
+        const userRef = doc(db, "users", id);
+        await updateDoc(userRef, {
+           dailyQuota: editingQuotaValue
+        });
+        setEditQuotaId(null);
+      } catch (err) {
+        console.error("Failed to update quota", err);
+        alert("Failed to update quota");
+      }
   };
 
   // Stats Logic
@@ -162,8 +178,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
               <Users className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Total Members</p>
-              <h3 className="text-2xl font-bold text-white">{totalMembers}</h3>
+              <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">Total Members</p>
+              <h3 className="text-2xl font-bold text-white mt-1">{totalMembers}</h3>
             </div>
           </div>
           
@@ -172,8 +188,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
               <UserCheck className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Active Now</p>
-              <h3 className="text-2xl font-bold text-white">{activeMembers}</h3>
+              <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">Active</p>
+              <h3 className="text-2xl font-bold text-white mt-1">{activeMembers}</h3>
             </div>
           </div>
 
@@ -182,259 +198,241 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
               <Clock className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Expired</p>
-              <h3 className="text-2xl font-bold text-white">{expiredMembers}</h3>
+              <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">Expired</p>
+              <h3 className="text-2xl font-bold text-white mt-1">{expiredMembers}</h3>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Create User Panel (Left) */}
-          <div className="lg:col-span-4">
-            <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800 sticky top-28 shadow-2xl">
-              <div className="mb-6 pb-4 border-b border-slate-800">
-                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <UserPlus className="w-5 h-5 text-indigo-400" />
-                  Register New Member
-                </h2>
-                <p className="text-xs text-slate-500 mt-1">Create account credentials and set validity period.</p>
-              </div>
-
-              <form onSubmit={handleAddUser} className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Username</label>
+          {/* Add User Form */}
+          <div className="lg:col-span-1 h-fit bg-slate-900/50 border border-slate-800 rounded-2xl p-6 sticky top-24">
+            <div className="flex items-center gap-2 mb-6 text-indigo-400">
+              <UserPlus className="w-5 h-5" />
+              <h2 className="text-lg font-bold">Register New User</h2>
+            </div>
+            
+            <form onSubmit={handleAddUser} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Username</label>
+                <div className="relative">
+                  <UserPlus className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
                   <input
                     type="text"
                     value={newUser.username}
                     onChange={(e) => setNewUser({...newUser, username: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all placeholder-slate-700"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all"
                     placeholder="Enter username"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Password</label>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Password</label>
+                <div className="relative">
+                  <Key className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
                   <input
                     type="text"
                     value={newUser.password}
                     onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all placeholder-slate-700"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all"
                     placeholder="Set password"
                     required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Validity (Days)</label>
-                      <input
-                        type="number"
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Duration</label>
+                   <div className="relative">
+                      <Clock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                      <select
                         value={newUser.days}
-                        onChange={(e) => setNewUser({...newUser, days: parseInt(e.target.value)})}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all font-mono"
-                        min="1"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Daily Quota</label>
-                      <input
-                        type="number"
-                        value={newUser.quota}
-                        onChange={(e) => setNewUser({...newUser, quota: parseInt(e.target.value)})}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all font-mono"
-                        min="1"
-                        required
-                      />
-                    </div>
+                        onChange={(e) => setNewUser({...newUser, days: Number(e.target.value)})}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none appearance-none"
+                      >
+                        <option value={7}>7 Days</option>
+                        <option value={30}>30 Days</option>
+                        <option value={90}>3 Months</option>
+                        <option value={365}>1 Year</option>
+                      </select>
+                   </div>
                 </div>
-                
-                <div className="pt-4">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-900/30 disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2 group"
-                  >
-                    {loading ? (
-                      'Processing...' 
-                    ) : (
-                      <>
-                        <UserPlus className="w-5 h-5 group-hover:scale-110 transition-transform" /> 
-                        Create Account
-                      </>
-                    )}
-                  </button>
+                <div>
+                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Quota / Day</label>
+                   <div className="relative">
+                      <Zap className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                      <input 
+                         type="number"
+                         min="1"
+                         value={newUser.quota}
+                         onChange={(e) => setNewUser({...newUser, quota: Number(e.target.value)})}
+                         className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
+                      />
+                   </div>
                 </div>
-              </form>
-            </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-2"
+              >
+                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                Create Account
+              </button>
+            </form>
           </div>
 
-          {/* Member List Panel (Right) */}
-          <div className="lg:col-span-8 space-y-4">
-            
-            {/* Search Bar */}
-            <div className="bg-slate-900 rounded-xl p-4 border border-slate-800 flex items-center gap-3 shadow-md">
-               <Search className="w-5 h-5 text-slate-500" />
-               <input 
-                 type="text"
-                 value={searchTerm}
-                 onChange={(e) => setSearchTerm(e.target.value)}
-                 placeholder="Search by username..."
-                 className="bg-transparent border-none outline-none text-white w-full placeholder-slate-600 text-sm"
-               />
-               <div className="px-3 py-1 bg-slate-800 rounded-lg text-xs font-medium text-slate-400 border border-slate-700 whitespace-nowrap">
-                  {filteredUsers.length} Results
-               </div>
-            </div>
-
-            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-widest font-bold">
-                    <tr>
-                      <th className="px-6 py-4">User Identity</th>
-                      <th className="px-6 py-4">Usage Today</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Expiration</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {filteredUsers.length > 0 ? (
-                      filteredUsers.map((user) => {
-                        const isExpired = new Date(user.expiryDate) < new Date();
-                        const isToday = user.lastUsageDate === new Date().toISOString().split('T')[0];
-                        const displayUsage = isToday ? user.usageCount : 0;
-                        const quota = user.dailyQuota || 10;
-                        const usagePercent = Math.min((displayUsage / quota) * 100, 100);
-
-                        return (
-                          <tr key={user.id} className="hover:bg-slate-800/50 transition-colors group">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shadow-md ${user.username === 'admin' ? 'bg-indigo-600 text-white shadow-indigo-500/20' : 'bg-slate-800 text-slate-300 border border-slate-700'}`}>
-                                  {user.username.charAt(0).toUpperCase()}
-                                </div>
-                                <div>
-                                  <div className="font-bold text-white">{user.username}</div>
-                                  {editPasswordId === user.id ? (
-                                     <div className="mt-2 flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
-                                       <input 
-                                         type="text" 
-                                         value={newPassword}
-                                         onChange={(e) => setNewPassword(e.target.value)}
-                                         className="bg-slate-950 border border-slate-600 rounded px-2 py-1 text-xs w-32 text-white focus:border-indigo-500 outline-none"
-                                         placeholder="New Password"
-                                         autoFocus
-                                       />
-                                       <button onClick={() => handleUpdatePassword(user.id)} className="text-[10px] bg-indigo-600 hover:bg-indigo-500 px-2 py-1 rounded text-white font-bold">SAVE</button>
-                                       <button onClick={() => setEditPasswordId(null)} className="text-[10px] bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white">CANCEL</button>
-                                     </div>
-                                  ) : (
-                                     <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                                       <span className="opacity-50">Pass:</span> 
-                                       <span className="font-mono bg-slate-800 px-1.5 rounded">{user.password}</span>
-                                     </div>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                                <div className="flex flex-col gap-1 w-24">
-                                    <div className="flex items-center justify-between text-xs font-bold text-slate-300">
-                                        <span>{displayUsage} / {quota}</span>
-                                        <button onClick={() => {
-                                            const newQ = parseInt(prompt("Set new daily quota:", quota.toString()) || "");
-                                            if(!isNaN(newQ)) handleUpdateQuota(user.id, newQ);
-                                        }} className="text-[10px] text-indigo-400 hover:underline">Edit</button>
-                                    </div>
-                                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                        <div 
-                                          className={`h-full rounded-full transition-all ${usagePercent >= 100 ? 'bg-red-500' : 'bg-indigo-500'}`} 
-                                          style={{width: `${usagePercent}%`}}
-                                        ></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              {isExpired ? (
-                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-orange-500/10 text-orange-400 border border-orange-500/20">
-                                   <Clock className="w-3 h-3" /> Expired
-                                 </span>
-                              ) : !user.isActive ? (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-red-500/10 text-red-400 border border-red-500/20">
-                                  <Ban className="w-3 h-3" /> Banned
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                  <CheckCircle className="w-3 h-3" /> Active
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4">
-                               <div className="flex flex-col">
-                                  <span className="text-sm text-slate-300 font-medium">
-                                    {new Date(user.expiryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                  </span>
-                                  <span className="text-[10px] text-slate-500">
-                                    {isExpired ? 'Access Revoked' : 'Valid until'}
-                                  </span>
-                               </div>
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => toggleBan(user.id, user.isActive, user.username)}
-                                  className={`p-2 rounded-lg transition-all border ${
-                                    user.isActive 
-                                      ? 'bg-slate-800 border-slate-700 text-slate-400 hover:border-red-500/50 hover:text-red-400 hover:bg-red-500/10' 
-                                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                                  }`}
-                                  title={user.isActive ? "Suspend Account" : "Activate Account"}
-                                >
-                                  {user.isActive ? <Ban className="w-4 h-4" /> : <RefreshCw className="w-4 h-4" />}
-                                </button>
-                                
-                                <button
-                                  onClick={() => {
-                                    setEditPasswordId(user.id);
-                                    setNewPassword('');
-                                  }}
-                                  className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:border-indigo-500/50 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
-                                  title="Reset Password"
-                                >
-                                  <Key className="w-4 h-4" />
-                                </button>
-
-                                <div className="w-px h-6 bg-slate-800 mx-1"></div>
-
-                                <button
-                                  onClick={() => handleDeleteUser(user.id, user.username)}
-                                  className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:border-red-500/50 hover:text-red-500 hover:bg-red-500/10 transition-all"
-                                  title="Delete Permanently"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-16 text-center text-slate-500">
-                          <div className="flex flex-col items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-slate-800/50 flex items-center justify-center">
-                               <Search className="w-6 h-6 opacity-30" />
-                            </div>
-                            <p>No members found matching "{searchTerm}"</p>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+          {/* User List Table */}
+          <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-slate-800 flex flex-wrap gap-4 justify-between items-center bg-slate-900/80 backdrop-blur">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                 <Users className="w-5 h-5 text-indigo-400" />
+                 Member List
+              </h2>
+              <div className="relative w-full max-w-xs">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                <input 
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search username..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 pl-9 pr-4 text-sm text-white focus:border-indigo-500 outline-none"
+                />
               </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-950/50 border-b border-slate-800 text-xs text-slate-400 uppercase tracking-wider">
+                    <th className="p-4 font-medium">User Info</th>
+                    <th className="p-4 font-medium">Status</th>
+                    <th className="p-4 font-medium">Plan Expiry</th>
+                    <th className="p-4 font-medium">Usage Today</th>
+                    <th className="p-4 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-slate-500">
+                         No users found.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map((user) => {
+                      const isExpired = new Date(user.expiryDate) < new Date();
+                      return (
+                        <tr key={user.id} className="hover:bg-slate-800/30 transition-colors group">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${user.isActive ? 'bg-indigo-500/20 text-indigo-300' : 'bg-red-500/20 text-red-400'}`}>
+                                {user.username.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-200">{user.username}</p>
+                                {editPasswordId === user.id ? (
+                                   <div className="flex items-center gap-1 mt-1 animate-in fade-in slide-in-from-left-2">
+                                      <input 
+                                        type="text" 
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        className="w-24 bg-slate-950 border border-slate-600 rounded px-2 py-0.5 text-xs text-white"
+                                        placeholder="New Pass"
+                                        autoFocus
+                                      />
+                                      <button onClick={() => handleUpdatePassword(user.id)} className="bg-green-500/20 text-green-400 p-0.5 rounded hover:bg-green-500/30"><CheckCircle className="w-3 h-3" /></button>
+                                      <button onClick={() => {setEditPasswordId(null); setNewPassword('');}} className="bg-red-500/20 text-red-400 p-0.5 rounded hover:bg-red-500/30"><X className="w-3 h-3" /></button>
+                                   </div>
+                                ) : (
+                                   <button 
+                                     onClick={() => setEditPasswordId(user.id)}
+                                     className="text-[10px] text-slate-500 hover:text-indigo-400 flex items-center gap-1 mt-0.5 transition-colors"
+                                   >
+                                     <Key className="w-3 h-3" /> Reset Pass
+                                   </button>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                             {user.isActive ? (
+                               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-xs font-medium border border-emerald-500/20">
+                                 <CheckCircle className="w-3 h-3" /> Active
+                               </span>
+                             ) : (
+                               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-500/10 text-red-400 text-xs font-medium border border-red-500/20">
+                                 <Ban className="w-3 h-3" /> Banned
+                               </span>
+                             )}
+                          </td>
+                          <td className="p-4">
+                             <div className={`text-sm font-medium ${isExpired ? 'text-red-400' : 'text-slate-300'}`}>
+                               {new Date(user.expiryDate).toLocaleDateString()}
+                             </div>
+                             {isExpired && <span className="text-[10px] text-red-500 font-bold uppercase">Expired</span>}
+                          </td>
+                          <td className="p-4">
+                             {editQuotaId === user.id ? (
+                               <div className="flex items-center gap-1">
+                                  <input 
+                                    type="number" 
+                                    value={editingQuotaValue}
+                                    onChange={(e) => setEditingQuotaValue(Number(e.target.value))}
+                                    className="w-16 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:border-indigo-500 outline-none"
+                                  />
+                                  <button onClick={() => saveQuota(user.id)} className="text-green-400 hover:bg-green-400/10 p-1 rounded"><CheckCircle className="w-3 h-3" /></button>
+                                  <button onClick={() => setEditQuotaId(null)} className="text-red-400 hover:bg-red-400/10 p-1 rounded"><X className="w-3 h-3" /></button>
+                               </div>
+                             ) : (
+                               <div className="group/quota flex items-center gap-2">
+                                  <div className="text-sm">
+                                    <span className="font-semibold text-white">{user.usageCount || 0}</span>
+                                    <span className="text-slate-500"> / {user.dailyQuota || 10}</span>
+                                  </div>
+                                  <button 
+                                    onClick={() => startEditingQuota(user.id, user.dailyQuota || 10)}
+                                    className="opacity-0 group-hover/quota:opacity-100 transition-opacity text-indigo-400 hover:bg-indigo-400/10 p-1 rounded"
+                                    title="Edit Quota"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+                               </div>
+                             )}
+                          </td>
+                          <td className="p-4 text-right">
+                             <div className="flex items-center justify-end gap-2">
+                               <button 
+                                 onClick={() => toggleBan(user.id, user.isActive, user.username)}
+                                 className={`p-2 rounded-lg transition-colors ${
+                                   user.isActive 
+                                     ? 'text-slate-400 hover:bg-red-500/10 hover:text-red-400' 
+                                     : 'text-emerald-400 hover:bg-emerald-500/10'
+                                 }`}
+                                 title={user.isActive ? "Ban User" : "Activate User"}
+                               >
+                                 {user.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                               </button>
+                               <button 
+                                 onClick={() => handleDeleteUser(user.id, user.username)}
+                                 className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                 title="Delete User"
+                               >
+                                 <Trash2 className="w-4 h-4" />
+                               </button>
+                             </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
