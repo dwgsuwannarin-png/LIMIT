@@ -212,6 +212,8 @@ const TEXTS = {
     standardMode: 'Standard Mode',
     proMode: 'Pro Mode',
     quotaExceededMsg: 'Daily Quota Exceeded. Switched to Standard Model (Free).',
+    freeModeLabel: 'Free Mode',
+    proModeLabel: 'Pro Mode',
   },
   TH: {
     exterior: 'ภายนอก',
@@ -258,6 +260,8 @@ const TEXTS = {
     standardMode: 'โหมดมาตรฐาน',
     proMode: 'โหมดโปร',
     quotaExceededMsg: 'โควต้าวันนี้หมดแล้ว เปลี่ยนเป็นโหมดมาตรฐาน (ฟรี)',
+    freeModeLabel: 'โหมดฟรี',
+    proModeLabel: 'โหมดโปร',
   }
 };
 
@@ -266,6 +270,9 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   const [language, setLanguage] = useState<'EN' | 'TH'>('EN');
   const [activeTab, setActiveTab] = useState<'exterior'|'interior'|'plan'>('exterior');
   const [showSettings, setShowSettings] = useState(false);
+  
+  // Generation Mode State
+  const [generationMode, setGenerationMode] = useState<'standard' | 'pro'>('pro');
   
   // User Data Sync State
   const [currentUserData, setCurrentUserData] = useState<UserData | null>(user);
@@ -447,7 +454,27 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
 
     try {
         // 1. Determine Model & Mode
-        const shouldUsePremium = hasPremiumQuota() || (!!customApiKey && customApiKey.length > 10);
+        // User explicitly wants Pro mode
+        const userWantsPro = generationMode === 'pro';
+        
+        // Can they actually use it? (Quota available OR Custom Key OR Admin)
+        const canUsePro = hasPremiumQuota() || (!!customApiKey && customApiKey.length > 10) || currentUserData?.id === 'admin';
+        
+        let shouldUsePremium = false;
+        
+        if (userWantsPro) {
+            if (canUsePro) {
+                shouldUsePremium = true;
+            } else {
+                 // User wants pro but no quota -> Fallback to standard and warn
+                 setWarningMsg(t.quotaExceededMsg);
+                 shouldUsePremium = false;
+            }
+        } else {
+            // User explicitly chose Free/Standard mode
+            shouldUsePremium = false;
+        }
+        
         const modelName = shouldUsePremium ? MODEL_PREMIUM : MODEL_STANDARD;
         
         // 2. System API Key Strategy
@@ -598,12 +625,10 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                   setHistoryStep(0);
                   foundImage = true;
                   
-                  // SUCCESS: Deduct Quota ONLY if using Premium and NOT custom key
-                  if (shouldUsePremium && !customApiKey) {
+                  // SUCCESS: Deduct Quota ONLY if using Premium and NOT custom key and NOT admin
+                  if (shouldUsePremium && !customApiKey && currentUserData?.id !== 'admin') {
                       await incrementUsage();
-                  } else if (!shouldUsePremium) {
-                      setWarningMsg(t.quotaExceededMsg);
-                  }
+                  } 
                   break;
               }
           }
@@ -795,14 +820,14 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                 {currentUserData?.username || 'Guest'}
                </p>
                <span className="text-[10px] text-gray-600">•</span>
-               {isProMode ? (
+               {generationMode === 'pro' && isProMode ? (
                   <p className="text-[9px] font-bold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20 tracking-wide">
                     {planName}
                   </p>
                ) : (
                   <p className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 tracking-wide flex items-center gap-1">
                     <BatteryWarning className="w-3 h-3" />
-                    {language === 'EN' ? 'STANDARD MODE' : 'โหมดมาตรฐาน'}
+                    {language === 'EN' ? 'FREE MODE' : 'โหมดฟรี'}
                   </p>
                )}
             </div>
@@ -838,10 +863,35 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
         {/* Left Sidebar (Tools) */}
         <aside className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col shrink-0 z-20">
           
-          {/* USER QUOTA BAR */}
-          {currentUserData?.id !== 'admin' && (
-             <div className="px-4 pt-4 pb-2">
-                 <div className="bg-gray-950/50 rounded-xl p-3 border border-gray-800">
+          {/* USER QUOTA BAR & MODE SELECTOR */}
+          <div className="px-4 pt-4 pb-2 space-y-3">
+             <div className="grid grid-cols-2 gap-1 p-1 bg-gray-950/50 rounded-xl border border-gray-800">
+                <button
+                    onClick={() => setGenerationMode('standard')}
+                    className={`py-2 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-2 transition-all ${
+                        generationMode === 'standard' 
+                        ? 'bg-gray-800 text-white shadow-md border border-gray-700' 
+                        : 'text-gray-500 hover:bg-gray-800/50 hover:text-gray-300'
+                    }`}
+                >
+                    <Zap className={`w-3.5 h-3.5 ${generationMode === 'standard' ? 'text-amber-400' : 'text-gray-600'}`} />
+                    {t.freeModeLabel}
+                </button>
+                <button
+                    onClick={() => setGenerationMode('pro')}
+                    className={`py-2 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-2 transition-all ${
+                        generationMode === 'pro' 
+                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/20' 
+                        : 'text-gray-500 hover:bg-gray-800/50 hover:text-gray-300'
+                    }`}
+                >
+                    <Crown className={`w-3.5 h-3.5 ${generationMode === 'pro' ? 'text-white' : 'text-gray-600'}`} />
+                    {t.proModeLabel}
+                </button>
+             </div>
+
+             {currentUserData?.id !== 'admin' && (
+                 <div className={`bg-gray-950/50 rounded-xl p-3 border border-gray-800 transition-all duration-300 ${generationMode === 'standard' ? 'opacity-50 grayscale' : 'opacity-100'}`}>
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
                             <Zap className="w-3 h-3 text-indigo-400" />
@@ -871,8 +921,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                       </p>
                     ) : null}
                  </div>
-             </div>
-          )}
+             )}
+          </div>
 
           {/* Mode Tabs */}
           <div className="px-4 py-2 shrink-0">
@@ -1162,7 +1212,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
               onClick={handleGenerate}
               disabled={isGenerating}
               className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-[0.98] border relative overflow-hidden group disabled:opacity-70 disabled:cursor-not-allowed ${
-                 isProMode 
+                 generationMode === 'pro' && isProMode
                   ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-indigo-400/20 shadow-indigo-900/40'
                   : 'bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 text-white border-slate-500/30'
               }`}
@@ -1177,7 +1227,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    {isProMode ? t.generate : t.standard}
+                    {generationMode === 'pro' && isProMode ? t.generate : t.standard}
                   </>
                 )}
               </span>
