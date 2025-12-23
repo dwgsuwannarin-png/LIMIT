@@ -36,7 +36,8 @@ import {
   Check,
   ExternalLink,
   ArrowUp,
-  Zap
+  Zap,
+  Crown
 } from 'lucide-react';
 import { UserData } from '../types';
 import { GoogleGenAI } from "@google/genai";
@@ -48,24 +49,6 @@ interface ImageEditorProps {
   onLogout: () => void;
   onBackToAdmin?: () => void;
 }
-
-// --- HELPER FOR API KEY ---
-const getApiKey = () => {
-  try {
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-      return process.env.API_KEY;
-    }
-  } catch (e) {}
-  
-  try {
-    if (typeof localStorage !== 'undefined') {
-        const stored = localStorage.getItem('gemini_api_key');
-        if (stored) return stored;
-    }
-  } catch(e) {}
-
-  return null;
-};
 
 // --- IMAGE PROCESSING HELPER ---
 const transformImage = (base64Str: string, type: 'rotate' | 'flip'): Promise<string> => {
@@ -193,7 +176,6 @@ const TEXTS = {
     interiorStyle: 'Interior Style',
     planStyle: 'Plan Style',
     generate: 'GENERATE',
-    connectKey: 'Connect Google API Key',
     generating: 'GENERATING...',
     pro: 'PRO',
     standard: 'Standard',
@@ -214,14 +196,8 @@ const TEXTS = {
     modeStandard: 'Standard',
     mode2D: '2D Plan to Room',
     mode3D: '3D Plan to Room',
-    settings: 'API Key Settings',
-    enterKey: 'Enter Google API Key',
-    saveKey: 'Save Key',
-    removeKey: 'Remove Key',
-    apiKeyPlaceholder: 'Paste your API Key here...',
-    getKeyLink: 'Get API Key (Google AI Studio)', 
     dailyQuota: 'Daily Quota',
-    quotaLimitReached: 'Daily quota reached. Please try again tomorrow.',
+    quotaLimitReached: 'Daily quota limit reached. Please contact admin.',
   },
   TH: {
     exterior: 'ภายนอก',
@@ -238,7 +214,6 @@ const TEXTS = {
     interiorStyle: 'สไตล์ตกแต่ง',
     planStyle: 'รูปแบบแปลน',
     generate: 'สร้างรูปภาพ',
-    connectKey: 'เชื่อมต่อ Google API Key',
     generating: 'กำลังสร้าง...',
     pro: 'โปร',
     standard: 'มาตรฐาน',
@@ -259,14 +234,8 @@ const TEXTS = {
     modeStandard: 'ทั่วไป',
     mode2D: 'แปลน 2D เป็นห้อง',
     mode3D: 'แปลน 3D เป็นห้อง',
-    settings: 'ตั้งค่า API Key',
-    enterKey: 'กรอก Google API Key',
-    saveKey: 'บันทึก',
-    removeKey: 'ลบ Key',
-    apiKeyPlaceholder: 'วาง API Key ที่นี่...',
-    getKeyLink: 'ขอคีย์ฟรี (Google AI Studio)', 
     dailyQuota: 'โควต้าวันนี้',
-    quotaLimitReached: 'คุณใช้โควต้าประจำวันหมดแล้ว กรุณากลับมาใหม่พรุ่งนี้',
+    quotaLimitReached: 'โควต้าวันนี้หมดแล้ว กรุณาติดต่อแอดมิน',
   }
 };
 
@@ -274,8 +243,6 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   // UI State
   const [language, setLanguage] = useState<'EN' | 'TH'>('EN');
   const [activeTab, setActiveTab] = useState<'exterior'|'interior'|'plan'>('exterior');
-  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
-  const [manualKey, setManualKey] = useState('');
   
   // User Data Sync State
   const [currentUserData, setCurrentUserData] = useState<UserData | null>(user);
@@ -309,7 +276,6 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
-  const [hasApiKey, setHasApiKey] = useState(false);
 
   // Refs
   const refFileInputRef = useRef<HTMLInputElement>(null);
@@ -341,60 +307,6 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
 
     return () => unsub();
   }, [user]);
-
-  // --- API KEY CHECK ---
-  useEffect(() => {
-    const checkKey = async () => {
-      const key = getApiKey();
-      if (key) {
-        setHasApiKey(true);
-        if (typeof localStorage !== 'undefined') {
-            const stored = localStorage.getItem('gemini_api_key');
-            if(stored) setManualKey(stored);
-        }
-        return;
-      }
-      const aistudio = (window as any).aistudio;
-      if (aistudio && await aistudio.hasSelectedApiKey()) {
-        setHasApiKey(true);
-      }
-    };
-    checkKey();
-  }, []);
-
-  const handleConnectKey = async () => {
-      const aistudio = (window as any).aistudio;
-      if (aistudio) {
-          try {
-              await aistudio.openSelectKey();
-              setHasApiKey(true);
-              setErrorMsg('');
-          } catch (e) {
-              setErrorMsg("Key selection cancelled.");
-          }
-      } else {
-          setIsKeyModalOpen(true);
-      }
-  };
-  
-  const handleSaveManualKey = () => {
-      if(manualKey.trim()) {
-          localStorage.setItem('gemini_api_key', manualKey.trim());
-          setHasApiKey(true);
-          setIsKeyModalOpen(false);
-          setErrorMsg('');
-      }
-  };
-
-  const handleRemoveManualKey = () => {
-      localStorage.removeItem('gemini_api_key');
-      setManualKey('');
-      if(typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-          setHasApiKey(true);
-      } else {
-          setHasApiKey(false);
-      }
-  };
 
   // --- HISTORY HELPERS ---
   const addToHistory = (image: string) => {
@@ -456,29 +368,23 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
     }
   };
 
-  const checkQuota = (): boolean => {
+  // Check if admin quota is available
+  const isPremiumAvailable = (): boolean => {
       if (!currentUserData || currentUserData.id === 'admin') return true;
 
       const quota = currentUserData.dailyQuota || 10;
       const usage = currentUserData.usageCount || 0;
       
-      // Since we auto-reset visual state in useEffect, rely on currentUserData.usageCount
-      // Note: If lastUsageDate was yesterday, useEffect sets usageCount to 0 visually.
-      // But we double check strictly here.
       const today = new Date().toISOString().split('T')[0];
       const effectiveUsage = currentUserData.lastUsageDate === today ? usage : 0;
 
-      if (effectiveUsage >= quota) {
-          return false;
-      }
-      return true;
+      return effectiveUsage < quota;
   };
 
   const incrementUsage = async () => {
       if (!currentUserData || currentUserData.id === 'admin') return;
 
       const userRef = doc(db, "users", currentUserData.id);
-      // We need to fetch fresh data to atomically increment and ensure date correctness
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
           const data = userSnap.data() as UserData;
@@ -486,7 +392,6 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
           
           let newCount = (data.usageCount || 0) + 1;
           
-          // Reset if day changed
           if (data.lastUsageDate !== today) {
               newCount = 1;
           }
@@ -501,24 +406,16 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   const handleGenerate = async () => {
     setErrorMsg('');
     
-    // 1. Check API Key
-    let apiKey = getApiKey();
-    if (!apiKey) {
-        if (!hasApiKey) {
-            if ((window as any).aistudio) {
-                await handleConnectKey();
-                if (!hasApiKey) return;
-                apiKey = getApiKey();
-            } else {
-                setIsKeyModalOpen(true);
-                return;
-            }
-        }
+    // 1. Strict Quota Check
+    if (!isPremiumAvailable()) {
+        setErrorMsg(t.quotaLimitReached);
+        return;
     }
 
-    // 2. Check Quota
-    if (!checkQuota()) {
-        setErrorMsg(t.quotaLimitReached);
+    // 2. System API Key
+    const activeApiKey = process.env.API_KEY;
+    if (!activeApiKey) {
+        setErrorMsg("System Error: Admin API Key is not configured.");
         return;
     }
     
@@ -530,7 +427,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
 
     setIsGenerating(true);
     try {
-      const genAI = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY }); 
+      const genAI = new GoogleGenAI({ apiKey: activeApiKey }); 
       const modelName = 'gemini-3-pro-image-preview'; 
       
       let fullPrompt = "";
@@ -651,11 +548,9 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
     } catch (err: any) {
       console.error(err);
       if (err.message && err.message.includes("Requested entity was not found")) {
-         setHasApiKey(false);
-         setErrorMsg("API Key invalid or expired. Please check settings.");
-         setIsKeyModalOpen(true); 
+         setErrorMsg("System API Key Issue. Please contact admin.");
       } else if (err.message && (err.message.includes("429") || err.message.includes("Quota exceeded"))) {
-         setErrorMsg("Quota exceeded (429). Please wait or upgrade.");
+         setErrorMsg("System busy (Quota exceeded). Please try again later.");
       } else {
          setErrorMsg(err.message || "Failed to generate image.");
       }
@@ -753,73 +648,12 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   // QUOTA UI DATA
   const quota = currentUserData?.dailyQuota || 10;
   const usage = currentUserData?.usageCount || 0;
-  const isUsageLimit = usage >= quota && currentUserData?.id !== 'admin';
+  const isAvailable = isPremiumAvailable();
   const usagePercent = Math.min((usage / quota) * 100, 100);
 
   return (
     <div className="h-screen w-full flex flex-col bg-gray-950 text-gray-200 font-sans overflow-hidden">
       
-      {/* API Key Modal */}
-      {isKeyModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-           <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
-              <button 
-                onClick={() => setIsKeyModalOpen(false)}
-                className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
-              >
-                 <X className="w-5 h-5" />
-              </button>
-              
-              <div className="flex flex-col items-center mb-6">
-                 <div className="w-12 h-12 bg-indigo-900/50 rounded-full flex items-center justify-center mb-3 text-indigo-400">
-                    <Key className="w-6 h-6" />
-                 </div>
-                 <h2 className="text-xl font-bold text-white">{t.settings}</h2>
-                 <p className="text-gray-400 text-sm mt-1">{t.enterKey}</p>
-              </div>
-
-              <div className="space-y-4">
-                 <input 
-                   type="text" 
-                   value={manualKey}
-                   onChange={(e) => setManualKey(e.target.value)}
-                   className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all placeholder-gray-600 font-mono text-sm"
-                   placeholder={t.apiKeyPlaceholder}
-                 />
-                 
-                 <div className="flex gap-2 pt-2">
-                    <button 
-                      onClick={handleSaveManualKey}
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
-                    >
-                       <Check className="w-4 h-4" /> {t.saveKey}
-                    </button>
-                    {localStorage.getItem('gemini_api_key') && (
-                        <button 
-                          onClick={handleRemoveManualKey}
-                          className="px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold py-3 rounded-xl transition-all flex items-center justify-center"
-                          title={t.removeKey}
-                        >
-                           <Trash2 className="w-4 h-4" />
-                        </button>
-                    )}
-                 </div>
-
-                 <a 
-                   href="https://aistudio.google.com/app/apikey" 
-                   target="_blank" 
-                   rel="noreferrer" 
-                   className="flex items-center justify-center gap-2 w-full py-3 mt-2 rounded-xl border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 transition-all text-sm font-semibold"
-                 >
-                   <Key className="w-4 h-4" />
-                   {t.getKeyLink}
-                   <ExternalLink className="w-3 h-3" />
-                 </a>
-              </div>
-           </div>
-        </div>
-      )}
-
       {/* Top Bar */}
       <header className="h-16 border-b border-gray-800 bg-gray-900/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-30">
         <div className="flex items-center gap-3">
@@ -829,9 +663,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
           <div>
             <h1 className="text-lg font-bold text-white tracking-tight leading-none">Professional AI</h1>
             <p className="text-[10px] text-gray-400 font-medium mt-0.5 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+              <span className={`w-1.5 h-1.5 rounded-full ${isAvailable ? 'bg-indigo-500' : 'bg-red-500'}`}></span>
               {currentUserData?.username || 'Guest'}
-              {hasApiKey && <span className="text-indigo-400 ml-2 border border-indigo-500/30 px-1.5 rounded text-[9px]">API CONNECTED</span>}
             </p>
           </div>
         </div>
@@ -849,10 +682,6 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
             <Globe className="w-3.5 h-3.5" /> {language}
           </button>
           
-          <button onClick={() => setIsKeyModalOpen(true)} className={`flex items-center gap-1.5 text-xs font-medium transition-colors px-3 py-1.5 rounded-lg border ${hasApiKey ? 'text-indigo-300 border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20' : 'text-orange-300 border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/20'}`}>
-            <Key className="w-3.5 h-3.5" /> {hasApiKey ? 'API Key' : 'Set Key'}
-          </button>
-
           <button onClick={onLogout} className="flex items-center gap-1.5 text-xs font-medium text-red-400 hover:text-red-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-500/10">
             <LogOut className="w-3.5 h-3.5" /> Logout
           </button>
@@ -864,28 +693,25 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
         {/* Left Sidebar (Tools) */}
         <aside className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col shrink-0 z-20">
           
-          {/* USER QUOTA BAR (NEW) */}
+          {/* USER QUOTA BAR */}
           {currentUserData?.id !== 'admin' && (
              <div className="px-4 pt-4 pb-2">
                  <div className="bg-gray-950/50 rounded-xl p-3 border border-gray-800">
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
-                            <Zap className={`w-3 h-3 ${isUsageLimit ? 'text-red-400' : 'text-yellow-400'}`} />
+                            <Zap className="w-3 h-3 text-indigo-400" />
                             {t.dailyQuota}
                         </span>
-                        <span className={`text-[10px] font-bold ${isUsageLimit ? 'text-red-400' : 'text-white'}`}>
+                        <span className={`text-[10px] font-bold ${isAvailable ? 'text-white' : 'text-red-400'}`}>
                             {usage} / {quota}
                         </span>
                     </div>
                     <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
                          <div 
-                           className={`h-full rounded-full transition-all duration-500 ${isUsageLimit ? 'bg-red-500' : 'bg-gradient-to-r from-yellow-400 to-orange-500'}`} 
+                           className={`h-full rounded-full transition-all duration-500 ${isAvailable ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : 'bg-red-500'}`} 
                            style={{width: `${usagePercent}%`}}
                          ></div>
                     </div>
-                    {isUsageLimit && (
-                        <p className="text-[9px] text-red-400 mt-1.5 text-center font-medium">Limit Reached</p>
-                    )}
                  </div>
              </div>
           )}
@@ -1169,32 +995,20 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
             )}
 
             <button 
-              onClick={hasApiKey ? handleGenerate : handleConnectKey}
-              disabled={isGenerating || (isUsageLimit && hasApiKey)}
+              onClick={handleGenerate}
+              disabled={isGenerating}
               className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-[0.98] border relative overflow-hidden group disabled:opacity-70 disabled:cursor-not-allowed ${
-                !hasApiKey 
-                  ? 'bg-gray-800 hover:bg-gray-700 text-indigo-400 border-indigo-500/30' 
-                  : isUsageLimit 
-                    ? 'bg-red-900/20 text-red-400 border-red-500/30'
-                    : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-indigo-400/20 shadow-indigo-900/40'
+                 isAvailable 
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-indigo-400/20 shadow-indigo-900/40'
+                  : 'bg-gray-800 cursor-not-allowed text-gray-500'
               }`}
             >
-              <div className={`absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-xl ${isUsageLimit ? 'hidden' : ''}`}></div>
+              <div className={`absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-xl`}></div>
               <span className="relative flex items-center justify-center gap-2 tracking-wide">
                 {isGenerating ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     {t.generating}
-                  </>
-                ) : !hasApiKey ? (
-                  <>
-                    <Key className="w-4 h-4" />
-                    {t.connectKey}
-                  </>
-                ) : isUsageLimit ? (
-                  <>
-                    <LogOut className="w-4 h-4 rotate-180" />
-                    Quota Limit Reached
                   </>
                 ) : (
                   <>
