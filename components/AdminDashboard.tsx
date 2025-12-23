@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../services/firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, setDoc, getDoc } from 'firebase/firestore';
 import { UserData } from '../types';
-import { Users, UserPlus, Ban, CheckCircle, RefreshCw, Key, Trash2, Search, AlertTriangle, UserCheck, Clock, ShieldCheck, Sparkles, BarChart3, Settings, X, Pencil, Zap, Save, Lock, Crown, Star, Gem } from 'lucide-react';
+import { Users, UserPlus, Ban, CheckCircle, RefreshCw, Key, Trash2, Search, AlertTriangle, UserCheck, Clock, ShieldCheck, Sparkles, BarChart3, Settings, X, Pencil, Zap, Save, Lock, Crown, Star, Gem, BatteryWarning } from 'lucide-react';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -11,12 +11,12 @@ interface AdminDashboardProps {
 
 // Quota Tiers Configuration
 // Adjusted for 3/5/10 Daily Limits
-// Pricing logic: Cost ~1.5 THB/Image -> Price to cover Max Usage + Margin
+// Free Tier added, Biz removed
 const QUOTA_TIERS = [
+  { id: 'free', label: 'Free', amount: 0, icon: BatteryWarning, color: 'text-slate-400', bg: 'bg-slate-500/20', desc: 'Standard Only' },
   { id: 'starter', label: 'Starter (199฿)', amount: 3, icon: Star, color: 'text-gray-400', bg: 'bg-gray-500/20', desc: '3 Premium/Day' },
   { id: 'standard', label: 'Standard (299฿)', amount: 5, icon: Zap, color: 'text-amber-400', bg: 'bg-amber-500/20', desc: '5 Premium/Day' },
-  { id: 'pro', label: 'Pro (590฿)', amount: 10, icon: Gem, color: 'text-indigo-400', bg: 'bg-indigo-500/20', desc: '10 Premium/Day' },
-  { id: 'biz', label: 'Biz (Custom)', amount: 30, icon: Crown, color: 'text-emerald-400', bg: 'bg-emerald-500/20', desc: '30 Premium/Day' }
+  { id: 'pro', label: 'Pro (590฿)', amount: 10, icon: Gem, color: 'text-indigo-400', bg: 'bg-indigo-500/20', desc: '10 Premium/Day' }
 ];
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoToEditor }) => {
@@ -75,7 +75,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
         isActive: true,
         expiryDate: expiryDate.toISOString(),
         createdAt: new Date().toISOString(),
-        dailyQuota: newUser.quota || 3,
+        dailyQuota: newUser.quota, // Can be 0
         usageCount: 0,
         lastUsageDate: today
       });
@@ -198,10 +198,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
 
   // Helper to identify tier
   const getTierInfo = (quota: number) => {
-      if (quota >= 30) return QUOTA_TIERS[3]; // Biz
-      if (quota >= 10) return QUOTA_TIERS[2]; // Pro
-      if (quota >= 5) return QUOTA_TIERS[1]; // Standard
-      return QUOTA_TIERS[0]; // Starter
+      if (quota >= 10) return QUOTA_TIERS[3]; // Pro
+      if (quota >= 5) return QUOTA_TIERS[2]; // Standard
+      if (quota >= 3) return QUOTA_TIERS[1]; // Starter
+      return QUOTA_TIERS[0]; // Free
   };
 
   // Stats Logic
@@ -352,7 +352,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
                           <Zap className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
                           <input 
                             type="number"
-                            min="1"
+                            min="0"
                             value={newUser.quota}
                             onChange={(e) => setNewUser({...newUser, quota: Number(e.target.value)})}
                             className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
@@ -467,7 +467,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
                   ) : (
                     filteredUsers.map((user) => {
                       const isExpired = new Date(user.expiryDate) < new Date();
-                      const tier = getTierInfo(user.dailyQuota || 0);
+                      const tier = getTierInfo(user.dailyQuota ?? 0);
 
                       return (
                         <tr key={user.id} className="hover:bg-slate-800/30 transition-colors group">
@@ -572,10 +572,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
                                <div className="group/quota flex items-center gap-2">
                                   <div className="text-sm">
                                     <span className="font-semibold text-white">{user.usageCount || 0}</span>
-                                    <span className="text-slate-500"> / {user.dailyQuota || 10}</span>
+                                    <span className="text-slate-500"> / {user.dailyQuota ?? 10}</span>
                                   </div>
                                   <button 
-                                    onClick={() => startEditingQuota(user.id, user.dailyQuota || 10)}
+                                    onClick={() => startEditingQuota(user.id, user.dailyQuota ?? 10)}
                                     className="opacity-0 group-hover/quota:opacity-100 transition-opacity text-indigo-400 hover:bg-indigo-400/10 p-1 rounded"
                                     title="Edit Quota"
                                   >

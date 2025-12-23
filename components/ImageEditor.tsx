@@ -211,8 +211,8 @@ const TEXTS = {
     usingCustomKey: 'Using Personal Key',
     standardMode: 'Standard Mode',
     proMode: 'Pro Mode',
-    quotaExceededMsg: 'Daily Quota Exceeded. Switched to Standard Model (Free).',
-    freeModeLabel: 'Free Mode',
+    quotaExceededMsg: 'Daily Quota Exceeded. Switched to Standard Mode.',
+    freeModeLabel: 'Standard Mode',
     proModeLabel: 'Pro Mode',
   },
   TH: {
@@ -259,8 +259,8 @@ const TEXTS = {
     usingCustomKey: 'ใช้คีย์ส่วนตัว',
     standardMode: 'โหมดมาตรฐาน',
     proMode: 'โหมดโปร',
-    quotaExceededMsg: 'โควต้าวันนี้หมดแล้ว เปลี่ยนเป็นโหมดมาตรฐาน (ฟรี)',
-    freeModeLabel: 'โหมดฟรี',
+    quotaExceededMsg: 'โควต้าวันนี้หมดแล้ว เปลี่ยนเป็นโหมดมาตรฐาน',
+    freeModeLabel: 'โหมดมาตรฐาน',
     proModeLabel: 'โหมดโปร',
   }
 };
@@ -412,7 +412,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   const hasPremiumQuota = (): boolean => {
       if (!currentUserData || currentUserData.id === 'admin') return true;
 
-      const quota = currentUserData.dailyQuota || 10;
+      // FIX: Use nullish coalescing so 0 quota is respected and not defaulted to 10
+      const quota = currentUserData.dailyQuota ?? 10;
       const usage = currentUserData.usageCount || 0;
       
       const today = new Date().toISOString().split('T')[0];
@@ -740,7 +741,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   };
 
   // QUOTA UI DATA
-  const quota = currentUserData?.dailyQuota || 10;
+  // FIX: Use nullish coalescing to respect 0 quota
+  const quota = currentUserData?.dailyQuota ?? 10;
   const usage = currentUserData?.usageCount || 0;
   // isProMode = Has Quota OR Custom Key
   const hasQuota = hasPremiumQuota();
@@ -751,7 +753,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
   const getPlanName = (q: number) => {
       if (q >= 500) return 'ENTERPRISE';
       if (q >= 50) return 'PRO PLAN';
-      return 'STARTER';
+      if (q >= 1) return 'STARTER';
+      return 'FREE';
   };
 
   const planName = getPlanName(quota);
@@ -827,7 +830,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                ) : (
                   <p className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 tracking-wide flex items-center gap-1">
                     <BatteryWarning className="w-3 h-3" />
-                    {language === 'EN' ? 'FREE MODE' : 'โหมดฟรี'}
+                    {language === 'EN' ? 'STANDARD MODE' : 'โหมดมาตรฐาน'}
                   </p>
                )}
             </div>
@@ -917,7 +920,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBack
                       <p className="text-[9px] text-indigo-400 mt-1.5 text-center">* Using Personal API Key</p>
                     ) : !hasQuota ? (
                       <p className="text-[9px] text-amber-400 mt-1.5 text-center flex items-center justify-center gap-1">
-                         <BatteryWarning className="w-3 h-3" /> Switched to Free Mode
+                         <BatteryWarning className="w-3 h-3" /> Switched to Standard Mode
                       </p>
                     ) : null}
                  </div>
