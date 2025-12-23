@@ -267,7 +267,7 @@ const TEXTS = {
 
 export const ImageEditor: React.FC<ImageEditorProps> = ({ user, onLogout, onBackToAdmin }) => {
   // UI State
-  const [language, setLanguage] = useState<'EN' | 'TH'>('EN');
+  const [language, setLanguage] = useState<'EN' | 'TH'>('TH');
   const [activeTab, setActiveTab] = useState<'exterior'|'interior'|'plan'>('exterior');
   const [showSettings, setShowSettings] = useState(false);
   
