@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../services/firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, setDoc, getDoc } from 'firebase/firestore';
 import { UserData } from '../types';
-import { Users, UserPlus, Ban, CheckCircle, RefreshCw, Key, Trash2, Search, AlertTriangle, UserCheck, Clock, ShieldCheck, Sparkles, BarChart3, Settings, X, Pencil, Zap, Save, Lock, Crown, Star } from 'lucide-react';
+import { Users, UserPlus, Ban, CheckCircle, RefreshCw, Key, Trash2, Search, AlertTriangle, UserCheck, Clock, ShieldCheck, Sparkles, BarChart3, Settings, X, Pencil, Zap, Save, Lock, Crown, Star, Gem } from 'lucide-react';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -10,15 +10,18 @@ interface AdminDashboardProps {
 }
 
 // Quota Tiers Configuration
+// Adjusted for 3/5/10 Daily Limits
+// Pricing logic: Cost ~1.5 THB/Image -> Price to cover Max Usage + Margin
 const QUOTA_TIERS = [
-  { id: 'starter', label: 'Starter', amount: 5, icon: Star, color: 'text-gray-400', bg: 'bg-gray-500/20' },
-  { id: 'pro', label: 'Pro', amount: 50, icon: Zap, color: 'text-amber-400', bg: 'bg-amber-500/20' },
-  { id: 'enterprise', label: 'Enterprise', amount: 500, icon: Crown, color: 'text-indigo-400', bg: 'bg-indigo-500/20' }
+  { id: 'starter', label: 'Starter (199฿)', amount: 3, icon: Star, color: 'text-gray-400', bg: 'bg-gray-500/20', desc: '3 Premium/Day' },
+  { id: 'standard', label: 'Standard (299฿)', amount: 5, icon: Zap, color: 'text-amber-400', bg: 'bg-amber-500/20', desc: '5 Premium/Day' },
+  { id: 'pro', label: 'Pro (590฿)', amount: 10, icon: Gem, color: 'text-indigo-400', bg: 'bg-indigo-500/20', desc: '10 Premium/Day' },
+  { id: 'biz', label: 'Biz (Custom)', amount: 30, icon: Crown, color: 'text-emerald-400', bg: 'bg-emerald-500/20', desc: '30 Premium/Day' }
 ];
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoToEditor }) => {
   const [users, setUsers] = useState<UserData[]>([]);
-  const [newUser, setNewUser] = useState({ username: '', password: '', days: 30, quota: 5 });
+  const [newUser, setNewUser] = useState({ username: '', password: '', days: 30, quota: 3 });
   const [editPasswordId, setEditPasswordId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   
@@ -68,11 +71,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
         isActive: true,
         expiryDate: expiryDate.toISOString(),
         createdAt: new Date().toISOString(),
-        dailyQuota: newUser.quota || 5,
+        dailyQuota: newUser.quota || 3,
         usageCount: 0,
         lastUsageDate: today
       });
-      setNewUser({ username: '', password: '', days: 30, quota: 5 });
+      setNewUser({ username: '', password: '', days: 30, quota: 3 });
     } catch (error) {
       console.error("Error adding user: ", error);
       alert("Failed to add user");
@@ -158,8 +161,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
 
   // Helper to identify tier
   const getTierInfo = (quota: number) => {
-      if (quota >= 500) return QUOTA_TIERS[2]; // Enterprise
-      if (quota >= 50) return QUOTA_TIERS[1]; // Pro
+      if (quota >= 30) return QUOTA_TIERS[3]; // Biz
+      if (quota >= 10) return QUOTA_TIERS[2]; // Pro
+      if (quota >= 5) return QUOTA_TIERS[1]; // Standard
       return QUOTA_TIERS[0]; // Starter
   };
 
@@ -286,25 +290,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Plan / Quota</label>
-                    <div className="flex gap-2 mb-2">
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">Pricing Tier (Premium Quota)</label>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
                         {QUOTA_TIERS.map(tier => (
                             <button
                                 type="button"
                                 key={tier.id}
                                 onClick={() => setNewUser({...newUser, quota: tier.amount})}
-                                className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all flex flex-col items-center gap-1 ${
+                                className={`py-2 px-2 rounded-lg text-xs font-medium border transition-all flex flex-col items-center gap-1 ${
                                     newUser.quota === tier.amount 
                                     ? `bg-slate-800 border-indigo-500 text-white` 
                                     : 'bg-slate-950 border-slate-700 text-slate-500 hover:border-slate-500'
                                 }`}
                             >
-                                <tier.icon className={`w-3 h-3 ${newUser.quota === tier.amount ? tier.color : ''}`} />
-                                {tier.label}
+                                <div className="flex items-center gap-1.5">
+                                  <tier.icon className={`w-3 h-3 ${newUser.quota === tier.amount ? tier.color : ''}`} />
+                                  <span>{tier.label}</span>
+                                </div>
+                                <span className="text-[9px] opacity-60">{tier.desc}</span>
                             </button>
                         ))}
                     </div>
-                    <div className="relative">
+                    <div className="relative mt-2">
                           <Zap className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
                           <input 
                             type="number"
@@ -312,7 +319,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
                             value={newUser.quota}
                             onChange={(e) => setNewUser({...newUser, quota: Number(e.target.value)})}
                             className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
-                            placeholder="Custom Amount"
+                            placeholder="Custom Daily Amount"
                           />
                       </div>
                   </div>
@@ -409,7 +416,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onGoTo
                     <th className="p-4 font-medium">User Info</th>
                     <th className="p-4 font-medium">Status</th>
                     <th className="p-4 font-medium">Plan Expiry</th>
-                    <th className="p-4 font-medium">Usage Today</th>
+                    <th className="p-4 font-medium">Premium Usage</th>
                     <th className="p-4 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
